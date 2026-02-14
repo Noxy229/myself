@@ -229,19 +229,23 @@ body.cyberpunk .terminal-container {
 /* Achievement Popup */
 .achievement-popup {
     position: fixed;
-    bottom: -100px;
+    bottom: -150px;
+    /* Start off-screen */
     right: 20px;
     background: rgba(20, 20, 20, 0.95);
     border: 2px solid var(--primary-color);
     padding: 15px 20px;
-    display: flex;
+    display: flex !important;
     align-items: center;
     gap: 15px;
-    z-index: 9999;
+    z-index: 99999;
+    /* Max Z-Index */
     width: 350px;
     box-shadow: 0 0 20px var(--primary-color);
     transition: bottom 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     cursor: pointer;
+    font-family: var(--font-header);
+    /* Ensure font is applied */
 }
 
 .achievement-popup.show,
