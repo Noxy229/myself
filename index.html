@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UAC // TERMINAL ACCESS</title>
+    <link rel="stylesheet" href="style.css?v=2">
+    <!-- Google Fonts: Fira Code & Russo One (for headers) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;700&family=Russo+One&family=Orbitron:wght@400;700;900&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <div class="scanlines"></div>
+    <div class="overlay"></div>
+    <div class="vignette"></div>
+
+    <div class="terminal-container">
+        <div class="terminal-header">
+            <div class="uac-logo">UAC</div>
+            <div class="title">SYSTEM STATUS: <span class="blink-warning">CRITICAL</span> // ID: noxy229</div>
+            <div class="uac-装饰">|||</div>
+        </div>
+
+        <div class="terminal-window" id="terminal-window">
+            <div id="output"></div>
+            <div class="input-line">
+                <span class="prompt">[UAC] noxy229@mars-base:~$</span>
+                <input type="text" id="command-input" autocomplete="off" spellcheck="false" autocorrect="off"
+                    autocapitalize="off" autofocus>
+            </div>
+        </div>
+
+        <div class="terminal-footer">
+            <span>UNION AEROSPACE CORPORATION</span>
+            <span>LEVEL 5 CLEARANCE</span>
+        </div>
+    </div>
+
+    <div id="achievement-popup" class="achievement-popup">
+        <div class="achievement-icon">🏆</div>
+        <div class="achievement-text">
+            <span class="achievement-title">ACHIEVEMENT UNLOCKED</span>
+            <span class="achievement-name">MASTER HACKER</span>
+            <span class="achievement-desc">You cracked the system! Screenshot this and DM me on Discord.</span>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>
