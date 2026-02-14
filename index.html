@@ -9,7 +9,8 @@
     <!-- Google Fonts: Fira Code & Russo One (for headers) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;700&family=Russo+One&display=swap"
+    <link
+        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;700&family=Russo+One&family=Orbitron:wght@400;700;900&display=swap"
         rel="stylesheet">
 </head>
 
@@ -29,7 +30,8 @@
             <div id="output"></div>
             <div class="input-line">
                 <span class="prompt">[UAC] noxy229@mars-base:~$</span>
-                <input type="text" id="command-input" autocomplete="off" spellcheck="false" autofocus>
+                <input type="text" id="command-input" autocomplete="off" spellcheck="false" autocorrect="off"
+                    autocapitalize="off" autofocus>
             </div>
         </div>
 
@@ -39,6 +41,14 @@
         </div>
     </div>
 
+    <div id="achievement-popup" class="achievement-popup">
+        <div class="achievement-icon">🏆</div>
+        <div class="achievement-text">
+            <span class="achievement-title">ACHIEVEMENT UNLOCKED</span>
+            <span class="achievement-name">MASTER HACKER</span>
+            <span class="achievement-desc">You cracked the system! Screenshot this and DM me on Discord.</span>
+        </div>
+    </div>
     <script src="script.js"></script>
 </body>
 
