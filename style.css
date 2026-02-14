@@ -1,0 +1,296 @@
+:root {
+    --bg-color: #050505;
+    --terminal-bg: rgba(10, 5, 5, 0.85);
+    /* Darker, slightly red tinted black */
+    --text-color: #cccccc;
+    --primary-red: #ff2a2a;
+    --argent-orange: #ff8c00;
+    --uac-grey: #4a4a4a;
+    --glow-color: rgba(255, 42, 42, 0.5);
+    --font-mono: 'Fira Code', monospace;
+    --font-header: 'Russo One', sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--bg-color);
+    background-image:
+        radial-gradient(circle at 50% 50%, #1a0505 0%, #000000 100%);
+    color: var(--text-color);
+    font-family: var(--font-mono);
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    font-size: 16px;
+}
+
+/* CRT Effects */
+.scanlines {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: linear-gradient(to bottom,
+            rgba(255, 0, 0, 0),
+            rgba(255, 0, 0, 0) 50%,
+            rgba(255, 0, 0, 0.05) 50%,
+            rgba(255, 0, 0, 0.05));
+    background-size: 100% 4px;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: radial-gradient(circle, rgba(255, 0, 0, 0) 60%, rgba(50, 0, 0, 0.2) 100%);
+    pointer-events: none;
+    z-index: 11;
+}
+
+.vignette {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    box-shadow: 0 0 150px rgba(0, 0, 0, 0.9) inset;
+    pointer-events: none;
+    z-index: 12;
+}
+
+/* Terminal Container */
+.terminal-container {
+    width: 85%;
+    max-width: 950px;
+    height: 85vh;
+    background: var(--terminal-bg);
+    border: 2px solid var(--uac-grey);
+    border-top: 4px solid var(--primary-red);
+    border-bottom: 4px solid var(--primary-red);
+    box-shadow: 0 0 30px rgba(255, 42, 42, 0.2);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    z-index: 20;
+    /* Brutalist corners */
+    clip-path: polygon(0 10px, 10px 0,
+            calc(100% - 10px) 0, 100% 10px,
+            100% calc(100% - 10px), calc(100% - 10px) 100%,
+            10px 100%, 0 calc(100% - 10px));
+}
+
+.terminal-header {
+    background: rgba(20, 0, 0, 0.9);
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--primary-red);
+    font-family: var(--font-header);
+    letter-spacing: 1px;
+}
+
+.uac-logo {
+    color: var(--primary-red);
+    font-weight: bold;
+    font-size: 1.2rem;
+    text-shadow: 0 0 5px var(--primary-red);
+}
+
+.title {
+    color: var(--uac-grey);
+    font-size: 0.9rem;
+}
+
+.blink-warning {
+    color: var(--primary-red);
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.terminal-window {
+    padding: 20px;
+    flex-grow: 1;
+    overflow-y: auto;
+    font-size: 1.1rem;
+    line-height: 1.5;
+    color: var(--text-color);
+
+    /* Scrollbar */
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary-red) #111;
+}
+
+.terminal-window::-webkit-scrollbar {
+    width: 8px;
+}
+
+.terminal-window::-webkit-scrollbar-track {
+    background: #111;
+}
+
+.terminal-window::-webkit-scrollbar-thumb {
+    background-color: var(--primary-red);
+    border: 1px solid #000;
+}
+
+.terminal-footer {
+    background: rgba(20, 0, 0, 0.9);
+    padding: 5px 20px;
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-header);
+    font-size: 0.7rem;
+    color: var(--uac-grey);
+    border-top: 1px solid var(--primary-red);
+    text-transform: uppercase;
+}
+
+/* Input Output Styles */
+.output-line {
+    margin-bottom: 8px;
+    word-wrap: break-word;
+}
+
+.output-content {
+    white-space: pre-wrap;
+}
+
+.prompt {
+    color: var(--primary-red);
+    margin-right: 8px;
+    font-weight: bold;
+    text-shadow: 0 0 5px var(--glow-color);
+}
+
+.command-executed {
+    color: var(--argent-orange);
+    font-family: var(--font-header);
+    letter-spacing: 0.5px;
+}
+
+.input-line {
+    display: flex;
+    align-items: center;
+    margin-top: 10px;
+}
+
+#command-input {
+    background: transparent;
+    border: none;
+    color: var(--primary-red);
+    font-family: var(--font-mono);
+    font-size: 1.1rem;
+    flex-grow: 1;
+    outline: none;
+    caret-color: var(--primary-red);
+    text-shadow: 0 0 3px var(--glow-color);
+}
+
+/* Response Formatting */
+.key {
+    color: var(--primary-red);
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.value {
+    color: var(--text-color);
+}
+
+.header {
+    color: var(--argent-orange);
+    font-family: var(--font-header);
+    text-transform: uppercase;
+    border-bottom: 1px dashed var(--uac-grey);
+    display: inline-block;
+    margin-top: 10px;
+    margin-bottom: 5px;
+}
+
+.ascii-art {
+    font-size: 8px;
+    line-height: 8px;
+    color: var(--primary-red);
+    margin-bottom: 20px;
+    white-space: pre;
+    font-weight: bold;
+    text-shadow: 0 0 5px var(--glow-color);
+}
+
+/* Rip and Tear Animation */
+.rip-tear-mode .terminal-container {
+    animation: shake 0.5s cubic-bezier(.36, .07, .19, .97) both infinite;
+    border-color: #ff0000;
+    box-shadow: 0 0 50px #ff0000;
+}
+
+.rip-tear-mode body {
+    background: #2a0000;
+}
+
+@keyframes shake {
+
+    10%,
+    90% {
+        transform: translate3d(-1px, 0, 0);
+    }
+
+    20%,
+    80% {
+        transform: translate3d(2px, 0, 0);
+    }
+
+    30%,
+    50%,
+    70% {
+        transform: translate3d(-4px, 0, 0);
+    }
+
+    40%,
+    60% {
+        transform: translate3d(4px, 0, 0);
+    }
+}
+
+@media (max-width: 600px) {
+    .terminal-container {
+        width: 100%;
+        height: 100%;
+        border: none;
+        clip-path: none;
+    }
+
+    .ascii-art {
+        font-size: 5px;
+        line-height: 5px;
+    }
+
+    .terminal-header,
+    .terminal-footer {
+        padding: 10px;
+    }
+}
