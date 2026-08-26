@@ -1,171 +1,220 @@
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.module.js';
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 
 // ==========================================
-// THE CONCEPT: "THE MONOLITH"
-// Statt einem Terminal bauen wir eine abstrakte, monolithische Struktur im Nichts.
-// Sie reagiert auf Mausbewegungen (Licht, Rotation). 
-// Scrollen bewegt die Kamera physisch durch die Struktur.
-// Verschiedene Ebenen der Struktur triggern UI-Panels im HTML.
-// ==========================================
-
-const container = document.getElementById('canvas-container');
-const loader = document.getElementById('loader');
-const progressEl = document.getElementById('load-progress');
-const panelAbout = document.getElementById('panel-about');
-const panelProjects = document.getElementById('panel-projects');
-
 // SCENE SETUP
-const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x030305, 0.015);
-
-const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(0, 0, 15);
-
-const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+// ==========================================
+const canvas = document.getElementById('webgl-canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: "high-performance" });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-container.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x000000, 0.02);
+
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.set(0, 0, 30);
 
 // ==========================================
-// BUILD THE STRUCTURE (Data Core / Monolith)
+// THE QUANTUM SINGULARITY (100k Particles)
 // ==========================================
-const coreGroup = new THREE.Group();
-scene.add(coreGroup);
+const particleCount = 100000;
+const geometry = new THREE.BufferGeometry();
+const positions = new Float32Array(particleCount * 3);
+const colors = new Float32Array(particleCount * 3);
+const sizes = new Float32Array(particleCount);
 
-// Geometrie für den Kern
-const coreGeo = new THREE.IcosahedronGeometry(2, 1);
-const coreMat = new THREE.MeshPhysicalMaterial({
-    color: 0x111115,
-    metalness: 0.9,
-    roughness: 0.1,
-    wireframe: true,
-    transparent: true,
-    opacity: 0.2
-});
-const core = new THREE.Mesh(coreGeo, coreMat);
-coreGroup.add(core);
+const colorRed = new THREE.Color(0xff2a2a);
+const colorWhite = new THREE.Color(0xffffff);
+const colorDim = new THREE.Color(0x333333);
 
-// Innere leuchtende Kugel
-const innerGeo = new THREE.IcosahedronGeometry(1.2, 2);
-const innerMat = new THREE.MeshBasicMaterial({ color: 0xff3333, wireframe: true });
-const inner = new THREE.Mesh(innerGeo, innerMat);
-coreGroup.add(inner);
-
-// Partikel/Datenstrom-Ringe
-const particles = new THREE.BufferGeometry();
-const particleCount = 2000;
-const posArray = new Float32Array(particleCount * 3);
-
-for(let i=0; i < particleCount * 3; i++) {
-    // Erschaffe einen Zylinder aus Partikeln
-    const r = 8 + Math.random() * 4;
+for (let i = 0; i < particleCount; i++) {
+    // Spherical distribution with a hollow core
+    const r = 5 + Math.random() * 25;
     const theta = Math.random() * Math.PI * 2;
-    const y = (Math.random() - 0.5) * 40;
+    const phi = Math.acos(2 * Math.random() - 1);
     
-    posArray[i*3] = r * Math.cos(theta);
-    posArray[i*3+1] = y;
-    posArray[i*3+2] = r * Math.sin(theta);
+    positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+    positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+    positions[i * 3 + 2] = r * Math.cos(phi);
+
+    // Coloring based on distance from center
+    const mixedColor = new THREE.Color();
+    if (r < 8) {
+        mixedColor.copy(colorRed);
+    } else if (r > 25) {
+        mixedColor.copy(colorDim);
+    } else {
+        mixedColor.copy(colorWhite).lerp(colorRed, Math.random());
+    }
+    
+    colors[i * 3] = mixedColor.r;
+    colors[i * 3 + 1] = mixedColor.g;
+    colors[i * 3 + 2] = mixedColor.b;
+    
+    sizes[i] = Math.random() * 2;
 }
-particles.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
-const partMat = new THREE.PointsMaterial({
-    size: 0.05,
-    color: 0x444455,
+
+geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+// Custom Shader Material for Particles
+const particleMaterial = new THREE.ShaderMaterial({
+    uniforms: {
+        time: { value: 0 },
+        pixelRatio: { value: renderer.getPixelRatio() }
+    },
+    vertexShader: `
+        uniform float time;
+        uniform float pixelRatio;
+        attribute float size;
+        attribute vec3 color;
+        varying vec3 vColor;
+        
+        void main() {
+            vColor = color;
+            vec3 pos = position;
+            
+            // Subtle wave distortion based on time and position
+            float wave = sin(pos.x * 0.5 + time) * cos(pos.z * 0.5 + time) * 0.5;
+            pos.y += wave;
+            
+            vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+            gl_PointSize = size * pixelRatio * (30.0 / -mvPosition.z);
+            gl_Position = projectionMatrix * mvPosition;
+        }
+    `,
+    fragmentShader: `
+        varying vec3 vColor;
+        
+        void main() {
+            // Circular particle with soft edge
+            float dist = length(gl_PointCoord - vec2(0.5));
+            if (dist > 0.5) discard;
+            
+            float alpha = 1.0 - (dist * 2.0);
+            gl_FragColor = vec4(vColor, alpha * 0.8);
+        }
+    `,
     transparent: true,
-    opacity: 0.8
+    blending: THREE.AdditiveBlending,
+    depthWrite: false
 });
-const particleSystem = new THREE.Points(particles, partMat);
+
+const particleSystem = new THREE.Points(geometry, particleMaterial);
 scene.add(particleSystem);
 
+// ==========================================
+// CORE WIREFRAME (Abstract Geometry)
+// ==========================================
+const coreGeo = new THREE.IcosahedronGeometry(4, 2);
+const coreMat = new THREE.MeshBasicMaterial({ 
+    color: 0x111111, 
+    wireframe: true,
+    transparent: true,
+    opacity: 0.3
+});
+const coreMesh = new THREE.Mesh(coreGeo, coreMat);
+scene.add(coreMesh);
+
 
 // ==========================================
-// LIGHTING
+// POST-PROCESSING (Bloom & Chromatic Aberration)
 // ==========================================
-const ambient = new THREE.AmbientLight(0x222233);
-scene.add(ambient);
+const renderScene = new RenderPass(scene, camera);
+const composer = new EffectComposer(renderer);
+composer.addPass(renderScene);
 
-// Dieses Licht folgt der Maus
-const mouseLight = new THREE.PointLight(0xff3333, 5, 20);
-scene.add(mouseLight);
+// Unreal Bloom
+const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+bloomPass.threshold = 0.1;
+bloomPass.strength = 1.2;
+bloomPass.radius = 0.5;
+composer.addPass(bloomPass);
+
+// Custom Chromatic Aberration Shader
+const ChromaticAberrationShader = {
+    uniforms: {
+        "tDiffuse": { value: null },
+        "amount":   { value: 0.003 }
+    },
+    vertexShader: `
+        varying vec2 vUv;
+        void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+    `,
+    fragmentShader: `
+        uniform sampler2D tDiffuse;
+        uniform float amount;
+        varying vec2 vUv;
+        
+        void main() {
+            vec2 offset = vec2(amount, 0.0);
+            vec4 cr = texture2D(tDiffuse, vUv + offset);
+            vec4 cga = texture2D(tDiffuse, vUv);
+            vec4 cb = texture2D(tDiffuse, vUv - offset);
+            gl_FragColor = vec4(cr.r, cga.g, cb.b, cga.a);
+        }
+    `
+};
+const rgbShiftPass = new ShaderPass(ChromaticAberrationShader);
+composer.addPass(rgbShiftPass);
 
 
 // ==========================================
-// INTERACTION & ANIMATION
+// INTERACTION & CAMERA LOGIC
 // ==========================================
 let mouseX = 0;
 let mouseY = 0;
 let targetX = 0;
 let targetY = 0;
-let scrollY = 0;
-let targetScroll = 0;
 
-// Mouse Support
+// Camera Target positions based on active UI panel
+const CAMERA_STATES = {
+    home: { x: 0, y: 0, z: 30 },
+    hardware: { x: -8, y: 5, z: 12 },
+    software: { x: 8, y: -5, z: 8 }
+};
+let currentCamState = 'home';
+let baseCamPos = new THREE.Vector3(0, 0, 30);
+
 document.addEventListener('mousemove', (e) => {
     mouseX = (e.clientX / window.innerWidth) * 2 - 1;
     mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
 });
 
-// Scroll Wheel Support
-document.addEventListener('wheel', (e) => {
-    targetScroll += e.deltaY * 0.02;
-    // Klemme das Scrollen (0 bis 30)
-    targetScroll = Math.max(0, Math.min(30, targetScroll));
-});
-
-// Touch / Swipe Support für Mobile
-let touchStartY = 0;
-let lastTouchY = 0;
-
-document.addEventListener('touchstart', (e) => {
-    touchStartY = e.touches[0].clientY;
-    lastTouchY = touchStartY;
-    
-    // Setze Mouse/Licht Position auf Touch
-    mouseX = (e.touches[0].clientX / window.innerWidth) * 2 - 1;
-    mouseY = -(e.touches[0].clientY / window.innerHeight) * 2 + 1;
-}, { passive: false });
-
+// Touch Support
 document.addEventListener('touchmove', (e) => {
-    e.preventDefault(); // Verhindert Browser-Scrollen
-    const touchY = e.touches[0].clientY;
-    const deltaY = lastTouchY - touchY;
-    lastTouchY = touchY;
-    
-    // Swipe nach oben (deltaY positiv) = reinzoomen (wie scroll down)
-    targetScroll += deltaY * 0.05;
-    targetScroll = Math.max(0, Math.min(30, targetScroll));
-    
-    // Licht folgt dem Finger
     mouseX = (e.touches[0].clientX / window.innerWidth) * 2 - 1;
     mouseY = -(e.touches[0].clientY / window.innerHeight) * 2 + 1;
-}, { passive: false });
+}, { passive: true });
+
+// Listen to UI Navigation
+window.addEventListener('nav-changed', (e) => {
+    currentCamState = e.detail.target;
+    if (CAMERA_STATES[currentCamState]) {
+        baseCamPos.copy(CAMERA_STATES[currentCamState]);
+        
+        // Boost RGB shift temporarily on transition (Glitch effect)
+        rgbShiftPass.uniforms.amount.value = 0.02;
+    }
+});
 
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+    composer.setSize(window.innerWidth, window.innerHeight);
 });
 
-    // Fake Ladesequenz für den Vibe
-    let loadProgress = 0;
-    const loadInterval = setInterval(() => {
-        loadProgress += Math.floor(Math.random() * 15) + 5;
-        if (loadProgress >= 100) {
-            loadProgress = 100;
-            clearInterval(loadInterval);
-            
-            progressEl.innerText = '100%';
-            setTimeout(() => {
-                loader.style.opacity = '0';
-                container.style.opacity = '1';
-                setTimeout(() => {
-                    loader.style.display = 'none';
-                    document.getElementById('hint').style.opacity = '1';
-                }, 1000);
-            }, 500);
-        } else {
-            progressEl.innerText = loadProgress + '%';
-        }
-    }, 80);
+// Update UI Coordinates display
+const coordsEl = document.getElementById('coords');
 
 const clock = new THREE.Clock();
 
@@ -173,45 +222,35 @@ function animate() {
     requestAnimationFrame(animate);
     const time = clock.getElapsedTime();
 
-    // Lerping for smooth mouse follow
+    // Shader Time Update
+    particleMaterial.uniforms.time.value = time;
+
+    // Smooth Mouse Tracking
     targetX = mouseX * 2;
     targetY = mouseY * 2;
-    
-    // Maus bewegt das Licht und rotiert leicht den Kern
-    mouseLight.position.x += (targetX * 5 - mouseLight.position.x) * 0.05;
-    mouseLight.position.y += (targetY * 5 - mouseLight.position.y) * 0.05;
-    mouseLight.position.z = 5;
 
-    // Smoothes Scrollen (Kamera fährt rein/raus)
-    scrollY += (targetScroll - scrollY) * 0.05;
-    camera.position.z = 15 - scrollY;
-    
-    // UI Visibility basierend auf Scroll-Tiefe
-    if (scrollY > 2 && scrollY < 12) {
-        panelAbout.style.opacity = '1';
-    } else {
-        panelAbout.style.opacity = '0';
-    }
+    // Dynamic Camera Positioning (Base Position + Mouse Offset)
+    camera.position.x += ((baseCamPos.x + targetX) - camera.position.x) * 0.05;
+    camera.position.y += ((baseCamPos.y + targetY) - camera.position.y) * 0.05;
+    camera.position.z += (baseCamPos.z - camera.position.z) * 0.05;
+    camera.lookAt(0, 0, 0);
 
-    if (scrollY > 14 && scrollY < 25) {
-        panelProjects.style.opacity = '1';
-    } else {
-        panelProjects.style.opacity = '0';
-    }
-
-    // Rotation
-    coreGroup.rotation.y = time * 0.2 + mouseX * 0.5;
-    coreGroup.rotation.x = mouseY * 0.2;
-    
-    inner.rotation.x = time * -0.5;
-    inner.rotation.z = time * 0.3;
-
+    // Rotate core structures
     particleSystem.rotation.y = time * 0.05;
-    
-    // Pulsierender Glitch auf der inneren Struktur
-    innerMat.wireframeLinewidth = Math.sin(time * 10) * 2 + 3;
+    particleSystem.rotation.z = time * 0.02;
+    coreMesh.rotation.x = time * 0.1;
+    coreMesh.rotation.y = time * 0.15;
 
-    renderer.render(scene, camera);
+    // Decay Chromatic Aberration back to normal
+    rgbShiftPass.uniforms.amount.value += (0.003 - rgbShiftPass.uniforms.amount.value) * 0.1;
+
+    // Update UI Coords
+    if(coordsEl) {
+        coordsEl.innerText = `X: ${camera.position.x.toFixed(4)} | Y: ${camera.position.y.toFixed(4)} | Z: ${camera.position.z.toFixed(4)}`;
+    }
+
+    // Render via Composer (Post-Processing)
+    composer.render();
 }
 
 animate();

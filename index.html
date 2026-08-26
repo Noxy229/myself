@@ -3,214 +3,515 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LENNOX // ARCHITECT</title>
+    <title>LENNOX // SYSTEM ARCHITECT</title>
     <style>
         :root {
-            --bg: #030305;
-            --text: #e0e0e0;
-            --accent: #ff3333;
-            --accent-glow: rgba(255, 51, 51, 0.4);
-            --line: rgba(255, 255, 255, 0.05);
+            --bg: #000000;
+            --text-main: #ffffff;
+            --text-dim: rgba(255, 255, 255, 0.4);
+            --accent: #ff2a2a;
+            --font-mono: 'Space Mono', 'Courier New', monospace;
+            --font-sans: 'Inter', -apple-system, sans-serif;
         }
-        
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            background-color: var(--bg);
-            color: var(--text);
-            font-family: 'Helvetica Neue', Inter, sans-serif;
-            overflow: hidden; 
-            height: 100vh;
+            background: var(--bg);
+            color: var(--text-main);
+            font-family: var(--font-sans);
+            overflow: hidden;
             width: 100vw;
-            cursor: crosshair;
-            touch-action: none; 
-            -webkit-user-select: none;
+            height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            touch-action: none;
             user-select: none;
         }
 
-        #canvas-container {
+        /* WebGL Layer */
+        #webgl-canvas {
             position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            z-index: 0;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+            /* Start invisible, fade in after boot */
             opacity: 0;
-            transition: opacity 2s ease-in;
+            transition: opacity 2s ease-in-out;
         }
 
-        #hud {
+        /* Scanlines Overlay */
+        .scanlines {
             position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.2));
+            background-size: 100% 4px;
+            z-index: 999;
+            pointer-events: none;
+            opacity: 0.4;
+        }
+
+        /* Cinematic Noise Overlay */
+        .noise {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: 998;
+            pointer-events: none;
+            opacity: 0.05;
+            background-image: url('data:image/svg+xml,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)"/%3E%3C/svg%3E');
+        }
+
+        /* UI Layer */
+        #ui-layer {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
             z-index: 10;
             pointer-events: none;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            padding: 40px;
+            padding: 3vw;
         }
 
-        header {
+        /* Top Bar */
+        .header {
             display: flex;
             justify-content: space-between;
-            font-size: 11px;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
             letter-spacing: 0.2em;
             text-transform: uppercase;
-            color: rgba(255,255,255,0.4);
-        }
-
-        /* Easter Egg Trigger */
-        .sys-log {
-            pointer-events: auto;
-            cursor: pointer;
-            transition: color 0.3s;
-        }
-        .sys-log:hover {
-            color: var(--accent);
-            text-shadow: 0 0 5px var(--accent-glow);
-        }
-
-        .hud-crosshair {
-            position: absolute;
-            top: 50%; left: 50%;
-            width: 40px; height: 40px;
-            transform: translate(-50%, -50%);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 50%;
-            pointer-events: none;
-        }
-        .hud-crosshair::after {
-            content: '';
-            position: absolute;
-            top: 50%; left: 50%;
-            width: 2px; height: 2px;
-            background: var(--accent);
-            transform: translate(-50%, -50%);
-            box-shadow: 0 0 10px var(--accent);
-        }
-
-        .info-panel {
-            position: absolute;
-            top: 50%; left: 10%;
-            transform: translateY(-50%);
-            width: 300px;
-            max-width: 80vw;
-            pointer-events: auto;
+            color: var(--text-dim);
             opacity: 0;
-            transition: opacity 0.5s ease;
-            background: rgba(3, 3, 5, 0.7);
-            padding: 20px;
-            border-left: 2px solid var(--accent);
-            backdrop-filter: blur(5px);
-            -webkit-backdrop-filter: blur(5px);
+            transform: translateY(-20px);
+            transition: all 1s cubic-bezier(0.19, 1, 0.22, 1) 2s;
+        }
+        
+        .header.visible {
+            opacity: 1;
+            transform: translateY(0);
         }
 
-        @media (max-width: 768px) {
-            #hud { padding: 20px; }
-            .info-panel {
-                left: 5% !important;
-                right: auto !important;
-                width: 90vw;
-                top: auto;
-                bottom: 10%;
-                transform: none;
-            }
-            h1 { font-size: 2.5rem; }
+        .header .live-indicator {
+            display: inline-block;
+            width: 6px; height: 6px;
+            background: var(--accent);
+            border-radius: 50%;
+            margin-right: 10px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; box-shadow: 0 0 10px var(--accent); }
+            50% { opacity: 0.2; box-shadow: 0 0 2px var(--accent); }
+            100% { opacity: 1; box-shadow: 0 0 10px var(--accent); }
+        }
+
+        /* Typography & Info Panels */
+        .hero-title {
+            position: absolute;
+            top: 50%;
+            left: 5vw;
+            transform: translateY(-50%);
+            pointer-events: auto;
+        }
+
+        .title-mask {
+            overflow: hidden;
+            padding-bottom: 10px;
         }
 
         h1 {
-            font-size: 4rem;
-            font-weight: 500;
-            letter-spacing: -0.04em;
-            line-height: 1;
-            margin-bottom: 20px;
+            font-size: clamp(3rem, 8vw, 8rem);
+            font-weight: 700;
+            letter-spacing: -0.05em;
+            line-height: 0.9;
+            margin: 0;
+            /* Text reveal animation driven by JS */
+            transform: translateY(100%);
+            opacity: 0;
+            transition: all 1.2s cubic-bezier(0.19, 1, 0.22, 1);
+        }
+        
+        h1.revealed {
+            transform: translateY(0);
+            opacity: 1;
         }
 
-        p {
-            font-size: 0.9rem;
-            line-height: 1.5;
-            color: rgba(255,255,255,0.6);
-            margin-bottom: 30px;
-        }
-
-        .data-list {
-            list-style: none;
-            font-family: monospace;
-            font-size: 10px;
+        .subtitle {
+            font-family: var(--font-mono);
+            font-size: clamp(0.7rem, 1vw, 1rem);
+            letter-spacing: 0.2em;
             color: var(--accent);
+            margin-top: 20px;
+            opacity: 0;
+            transition: opacity 1s ease 1s;
         }
-        .data-list li { margin-bottom: 8px; border-bottom: 1px solid var(--line); padding-bottom: 8px;}
 
-        #loader {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--bg);
-            z-index: 100;
+        .subtitle.revealed {
+            opacity: 1;
+        }
+
+        /* Decrypt Text Effect Class */
+        .decrypt-text {
+            font-family: var(--font-mono);
+            white-space: pre-wrap;
+        }
+
+        /* Interactive Nodes Menu (Bottom Right) */
+        .nodes-menu {
+            position: absolute;
+            bottom: 3vw;
+            right: 3vw;
+            text-align: right;
+            pointer-events: auto;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 1s cubic-bezier(0.19, 1, 0.22, 1) 2.5s;
+        }
+
+        .nodes-menu.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .node-item {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            letter-spacing: 0.1em;
+            color: var(--text-dim);
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: color 0.3s;
             display: flex;
             align-items: center;
-            justify-content: center;
-            color: var(--accent);
-            font-family: monospace;
-            font-size: 12px;
-            letter-spacing: 0.2em;
-            transition: opacity 1s;
+            justify-content: flex-end;
+            gap: 15px;
         }
 
-        #hint {
+        .node-item:hover {
+            color: var(--text-main);
+        }
+
+        .node-line {
+            width: 20px;
+            height: 1px;
+            background: var(--text-dim);
+            transition: width 0.3s, background 0.3s;
+        }
+
+        .node-item:hover .node-line {
+            width: 40px;
+            background: var(--accent);
+        }
+
+        /* Coordinates Display */
+        #coords {
             position: absolute;
-            bottom: 40px; left: 50%;
-            transform: translateX(-50%);
-            font-size: 10px;
-            letter-spacing: 0.2em;
-            color: rgba(255,255,255,0.3);
-            text-transform: uppercase;
+            bottom: 3vw;
+            left: 3vw;
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            color: var(--text-dim);
             opacity: 0;
-            transition: opacity 2s;
-            pointer-events: none;
+            transition: opacity 1s ease 2s;
+        }
+        
+        #coords.visible { opacity: 1; }
+
+        /* Loader */
+        #boot-sequence {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: #000;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            transition: opacity 0.5s;
+        }
+        #boot-log {
+            width: 300px;
+            height: 150px;
+            overflow: hidden;
+            text-align: left;
+            margin-bottom: 20px;
+        }
+        
+        /* Sub-Panels (Content overlays that fade in over the 3D scene) */
+        .content-panel {
+            position: absolute;
+            top: 50%;
+            right: 15vw;
+            transform: translateY(-50%);
+            width: 400px;
+            pointer-events: auto;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.5s ease;
+        }
+        .content-panel.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .content-panel h2 {
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            color: var(--accent);
+            margin-bottom: 20px;
+            letter-spacing: 0.1em;
+            border-bottom: 1px solid rgba(255,42,42,0.3);
+            padding-bottom: 10px;
+        }
+        .content-panel p {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: var(--text-dim);
+            margin-bottom: 15px;
+        }
+        .tech-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .tech-tags span {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            padding: 4px 8px;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 4px;
         }
 
         @media (max-width: 768px) {
-            #hint::after { content: ' (SWIPE UP/DOWN)'; }
+            h1 { font-size: 3.5rem; }
+            .content-panel {
+                right: 5vw;
+                left: 5vw;
+                width: 90vw;
+                top: 60%;
+            }
+            .nodes-menu {
+                bottom: 10vh;
+            }
         }
     </style>
 </head>
 <body>
 
-    <div id="loader">CALIBRATING NEURAL LINK... <span id="load-progress">0%</span></div>
-
-    <div id="canvas-container"></div>
-
-    <div id="hud">
-        <header>
-            <div class="sys-log" onclick="window.location.href='nexus.html'" title="Initialize override">Lennox_Nordmann // Core_V1</div>
-            <div>STATUS: ONLINE // LATENCY: 12ms</div>
-        </header>
-
-        <div class="hud-crosshair"></div>
-
-        <div id="panel-about" class="info-panel">
-            <h1>SYS.ADMIN</h1>
-            <p>I build high-end infrastructure, homelabs, and AI agents. Bridging the gap between raw compute and architectural design.</p>
-            <ul class="data-list">
-                <li>ROLE: Fachinformatiker (Systemintegration)</li>
-                <li>SYS: Linux, Proxmox, Docker</li>
-                <li>HW: Intel i5-13600KF // RX 9070 XT</li>
-            </ul>
-        </div>
-        
-        <div id="panel-projects" class="info-panel" style="left: auto; right: 10%;">
-            <h1>PROJECTS</h1>
-            <p>Self-hosted intelligence and distributed systems.</p>
-            <ul class="data-list">
-                <li>// ASTRA - Self-hosted AI Client</li>
-                <li>// BERICHTSHEFT - Automated IHK Logging</li>
-                <li>// SCROLLCRAFT - Scroll-driven architecture</li>
-            </ul>
-        </div>
-
-        <div id="hint">DRAG TO ROTATE // SCROLL TO EXPLORE</div>
+    <div id="boot-sequence">
+        <div id="boot-log"></div>
+        <div id="boot-progress">[ |||||||||||||||||||| ] 100%</div>
     </div>
 
-    <!-- Import Three.js -->
+    <!-- WebGL Container -->
+    <canvas id="webgl-canvas"></canvas>
+
+    <!-- Post-Processing Overlays -->
+    <div class="scanlines"></div>
+    <div class="noise"></div>
+
+    <div id="ui-layer">
+        <div class="header">
+            <div><span class="live-indicator"></span> UPLINK ESTABLISHED</div>
+            <div>SYS.ID: NOXY229</div>
+        </div>
+
+        <!-- Main Hero Title -->
+        <div class="hero-title" id="main-hero">
+            <div class="title-mask">
+                <h1 id="title-1">LENNOX</h1>
+            </div>
+            <div class="title-mask">
+                <h1 id="title-2" style="color: transparent; -webkit-text-stroke: 1px rgba(255,255,255,0.8);">NORDMANN</h1>
+            </div>
+            <div class="subtitle decrypt-text" data-text="SYSTEMS_ARCHITECT // AI_INFRASTRUCTURE">SYSTEMS_ARCHITECT // AI_INFRASTRUCTURE</div>
+        </div>
+
+        <!-- Dynamic Content Panels (Toggled by Nodes Menu) -->
+        <div id="panel-hardware" class="content-panel">
+            <h2>01 // HARDWARE_&_INFRASTRUCTURE</h2>
+            <p>High-end PC building and home networking. Operating at the intersection of raw silicon power and virtualization.</p>
+            <p>Current active deployment runs on an Intel i5-13600KF paired with a Radeon RX 9070 XT, utilizing a heavily customized Hyte Y60 chassis.</p>
+            <div class="tech-tags">
+                <span>PROXMOX</span><span>LINUX</span><span>GPU-PASSTHROUGH</span>
+            </div>
+        </div>
+
+        <div id="panel-software" class="content-panel">
+            <h2>02 // SOFTWARE_&_AGENTS</h2>
+            <p>Developing self-hosted intelligence and automated systems. Moving beyond traditional web design into autonomous execution.</p>
+            <p>Architect of "Astra" (Local AI Client) and automated IHK logging systems. Deep integration with Claude Code and Hermes APIs.</p>
+            <div class="tech-tags">
+                <span>DOCKER</span><span>NODE.JS</span><span>THREE.JS</span>
+            </div>
+        </div>
+
+        <!-- Navigation Nodes -->
+        <div class="nodes-menu">
+            <div class="node-item" data-target="home" onmouseenter="triggerGlitch(this)">
+                <span>00 // CORE</span><div class="node-line"></div>
+            </div>
+            <div class="node-item" data-target="hardware" onmouseenter="triggerGlitch(this)">
+                <span>01 // HW_INFRA</span><div class="node-line"></div>
+            </div>
+            <div class="node-item" data-target="software" onmouseenter="triggerGlitch(this)">
+                <span>02 // SW_AGENTS</span><div class="node-line"></div>
+            </div>
+        </div>
+
+        <div id="coords">X: 0.0000 | Y: 0.0000 | Z: 0.0000</div>
+    </div>
+
+    <!-- Load Three.js + PostProcessing from CDN -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
     <script type="module" src="app.js"></script>
+    
+    <script>
+        // ==========================================
+        // UI & DECRYPT TEXT EFFECTS
+        // ==========================================
+        const CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*";
+        
+        function decryptEffect(element, duration = 1000) {
+            const finalString = element.getAttribute('data-text');
+            if (!finalString) return;
+            
+            const length = finalString.length;
+            let iterations = 0;
+            const maxIterations = duration / 30; // Update every 30ms
+
+            const interval = setInterval(() => {
+                let currentString = "";
+                // Erhöhe den Anteil der korrekten Buchstaben basierend auf der Zeit
+                const revealThreshold = (iterations / maxIterations) * length;
+
+                for (let i = 0; i < length; i++) {
+                    if (finalString[i] === " ") {
+                        currentString += " ";
+                    } else if (i < revealThreshold) {
+                        currentString += finalString[i];
+                    } else {
+                        currentString += CHARS[Math.floor(Math.random() * CHARS.length)];
+                    }
+                }
+                
+                element.innerText = currentString;
+                
+                iterations++;
+                if (iterations > maxIterations) {
+                    clearInterval(interval);
+                    element.innerText = finalString;
+                }
+            }, 30);
+        }
+
+        function triggerGlitch(el) {
+            const span = el.querySelector('span');
+            const originalText = span.innerText;
+            const glitched = originalText.split('').map(char => 
+                Math.random() > 0.8 ? CHARS[Math.floor(Math.random() * CHARS.length)] : char
+            ).join('');
+            
+            span.innerText = glitched;
+            setTimeout(() => { span.innerText = originalText; }, 100);
+        }
+
+        // ==========================================
+        // BOOT SEQUENCE
+        // ==========================================
+        const bootLogs = [
+            "KERNEL BOOT...",
+            "MOUNTING VFS...",
+            "INITIALIZING NEURAL NET...",
+            "LOADING WEBGL CONTEXT...",
+            "COMPILING SHADERS...",
+            "ESTABLISHING LINK..."
+        ];
+        const logEl = document.getElementById('boot-log');
+        let logIdx = 0;
+
+        const bootInterval = setInterval(() => {
+            if (logIdx < bootLogs.length) {
+                logEl.innerHTML += `<div>> ${bootLogs[logIdx]} [OK]</div>`;
+                logIdx++;
+            } else {
+                clearInterval(bootInterval);
+                document.getElementById('boot-sequence').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('boot-sequence').style.display = 'none';
+                    
+                    // Reveal UI
+                    document.getElementById('title-1').classList.add('revealed');
+                    setTimeout(() => document.getElementById('title-2').classList.add('revealed'), 200);
+                    
+                    document.querySelector('.header').classList.add('visible');
+                    document.querySelector('.nodes-menu').classList.add('visible');
+                    document.getElementById('coords').classList.add('visible');
+                    
+                    const sub = document.querySelector('.subtitle');
+                    sub.classList.add('revealed');
+                    decryptEffect(sub, 1200);
+
+                    // Fade in Canvas
+                    document.getElementById('webgl-canvas').style.opacity = '1';
+                }, 500);
+            }
+        }, 150);
+
+        // ==========================================
+        // NAVIGATION LOGIC (Tells app.js to move camera)
+        // ==========================================
+        window.activePanel = 'home';
+        
+        document.querySelectorAll('.node-item').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const target = btn.getAttribute('data-target');
+                window.activePanel = target;
+                
+                // Hide all panels
+                document.querySelectorAll('.content-panel').forEach(p => p.classList.remove('active'));
+                
+                if (target === 'home') {
+                    document.getElementById('main-hero').style.opacity = '1';
+                    document.getElementById('main-hero').style.pointerEvents = 'auto';
+                } else {
+                    document.getElementById('main-hero').style.opacity = '0';
+                    document.getElementById('main-hero').style.pointerEvents = 'none';
+                    
+                    // Show specific panel
+                    setTimeout(() => {
+                        const panel = document.getElementById('panel-' + target);
+                        if(panel) {
+                            panel.classList.add('active');
+                            // Trigger decrypt on panel headings
+                            const h2 = panel.querySelector('h2');
+                            h2.setAttribute('data-text', h2.innerText);
+                            decryptEffect(h2, 800);
+                        }
+                    }, 400);
+                }
+                
+                // Dispatch event for Three.js to pick up
+                window.dispatchEvent(new CustomEvent('nav-changed', { detail: { target } }));
+            });
+        });
+    </script>
 </body>
 </html>
