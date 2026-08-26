@@ -104,6 +104,29 @@ animate();
 // ==========================================
 // THE SEQUENCE
 // ==========================================
+
+// Global Theme Update Function for Terminal
+window.updateWebGLTheme = (themeName) => {
+    if (themeName === 'cyberpunk') {
+        scene.fog.color.setHex(0x000515); // Dark blue fog
+        pointLight.color.setHex(0x00f3ff); // Cyan light
+        if (typeof screenMat !== 'undefined') screenMat.color.setHex(0x00f3ff);
+        if (typeof gridHelper !== 'undefined') {
+            gridHelper.material.color.setHex(0x00f3ff);
+            gridHelperTop.material.color.setHex(0x00f3ff);
+        }
+    } else {
+        // Doom Theme
+        scene.fog.color.setHex(0x0a0000); 
+        pointLight.color.setHex(0xff0000);
+        if (typeof screenMat !== 'undefined') screenMat.color.setHex(0xff0000);
+        if (typeof gridHelper !== 'undefined') {
+            gridHelper.material.color.setHex(0xff0000);
+            gridHelperTop.material.color.setHex(0xff0000);
+        }
+    }
+};
+
 startBtn.addEventListener('click', (e) => {
     e.preventDefault(); // Verhindert dass Mobile Browser extra Dinge machen
     introOverlay.style.opacity = '0';

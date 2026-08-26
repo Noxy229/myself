@@ -400,6 +400,13 @@ ${USER_PROFILE.hobbies.map(h => `<span class="value">- ${h}</span>`).join('<br>'
 };
 
 function setTheme(mode) {
+    // WebGL Color Syncing
+    try {
+        if (window.updateWebGLTheme) {
+            window.updateWebGLTheme(mode);
+        }
+    } catch(e) {}
+
     if (mode === 'cyberpunk') {
         document.body.classList.add('cyberpunk');
         currentTheme = 'cyberpunk';
@@ -611,13 +618,7 @@ function processCommand(cmd, args) {
     }
 }
 
-function printOutput(htmlContent) {
-    const outputDiv = document.createElement('div');
-    outputDiv.className = 'output-line output-content';
-    outputDiv.innerHTML = htmlContent;
-    outputElement.appendChild(outputDiv);
-    scrollToBottom();
-}
+// ==========================================\n// TYPING EFFECT (REWRITE)\n// ==========================================\nlet isTyping = false;\nlet typeQueue = [];\n\nfunction printOutput(htmlContent, instant = false) {\n    if (instant) {\n        const outputDiv = document.createElement('div');\n        outputDiv.className = 'output-line output-content';\n        outputDiv.innerHTML = htmlContent;\n        outputElement.appendChild(outputDiv);\n        scrollToBottom();\n        return;\n    }\n\n    // Wenn es echter HTML-Text ist (z.B. Banner), sofort printen, Typing-Effekt ist da oft kaputt\n    if (htmlContent.includes('<pre>') || htmlContent.includes('<table') || htmlContent.includes('<img')) {\n        return printOutput(htmlContent, true);\n    }\n\n    // Schreib-Animation Setup\n    const outputDiv = document.createElement('div');\n    outputDiv.className = 'output-line output-content typing-line';\n    outputElement.appendChild(outputDiv);\n    scrollToBottom();\n\n    isTyping = true;\n    inputElement.disabled = true;\n    \n    // Entferne alle HTML-Tags für reinen Text-Tipp-Effekt (sehr rudimentär, für komplexeres HTML müssen wir splitten)\n    // Für Terminal Output reicht oft der Text + einfache spans\n    let rawHtml = htmlContent;\n    \n    // Wenn schon getippt wird, unterbrechbar machen\n    let currentIndex = 0;\n    \n    function typeNextChar() {\n        if (!isTyping) {\n            // Abgebrochen -> sofort fertig rendern\n            outputDiv.innerHTML = rawHtml;\n            scrollToBottom();\n            inputElement.disabled = false;\n            if (!isHacking) inputElement.focus();\n            return;\n        }\n\n        // HTML Tags als ganzes überspringen\n        if (rawHtml[currentIndex] === '<') {\n            let tagEnd = rawHtml.indexOf('>', currentIndex);\n            if (tagEnd !== -1) {\n                currentIndex = tagEnd + 1;\n            } else {\n                currentIndex++;\n            }\n        } else {\n            currentIndex++;\n        }\n\n        outputDiv.innerHTML = rawHtml.substring(0, currentIndex) + '<span class=\"cursor-blink\">_</span>';\n        scrollToBottom();\n\n        if (currentIndex < rawHtml.length) {\n            setTimeout(typeNextChar, Math.random() * 15 + 5); // 5-20ms pro Zeichen\n        } else {\n            outputDiv.innerHTML = rawHtml;\n            isTyping = false;\n            inputElement.disabled = false;\n            if (!isHacking) inputElement.focus();\n        }\n    }\n    \n    typeNextChar();\n}\n\n// Interrupt typing with keyboard\ndocument.addEventListener('keydown', (e) => {\n    if (isTyping && (e.key === 'Enter' || e.key === 'Escape' || e.key === ' ')) {\n        e.preventDefault();\n        isTyping = false; // Bricht den Type-Loop ab und rendert alles sofort\n    }\n});
 
 function showAchievement() {
     const popup = document.getElementById('achievement-popup');
