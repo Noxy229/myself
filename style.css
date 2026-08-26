@@ -43,8 +43,7 @@ body.cyberpunk {
 
 body {
     background-color: var(--bg-color);
-    background-image: radial-gradient(circle at 50% 50%, #1a0505 0%, #000000 100%);
-    /* Default Doom BG */
+    background-image: none; /* Removed the flat CSS radial gradient so the 3D canvas is visible */
     color: var(--text-color);
     font-family: var(--font-mono);
     height: 100vh;
@@ -110,7 +109,7 @@ body.cyberpunk {
     width: 85%;
     max-width: 950px;
     height: 85vh;
-    background: var(--terminal-bg);
+    background: var(--terminal-bg); /* Controlled by CSS variable, overwritten in intro.js */
     border: var(--border-width) var(--border-style) var(--uac-grey);
     border-top: 4px solid var(--primary-color);
     border-bottom: 4px solid var(--primary-color);

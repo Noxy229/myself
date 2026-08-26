@@ -92,9 +92,16 @@ function animate() {
     requestAnimationFrame(animate);
     
     if (isAnimating) {
-        // Head-bobbing Effekt
-        walkTime += 0.1;
-        camera.position.y = 2 + Math.sin(walkTime) * 0.1;
+        walkTime += 0.05;
+        // Wenn das Terminal aktiv ist, mach eine sehr langsame schwebende Bewegung (Idle)
+        if (terminalApp.style.opacity === '1') {
+            camera.position.x = monitorTarget.x + Math.sin(walkTime * 0.5) * 0.5;
+            camera.position.y = monitorTarget.y + Math.cos(walkTime * 0.3) * 0.2;
+            camera.lookAt(monitorTarget);
+        } else {
+            // Head-bobbing Effekt beim Laufen
+            camera.position.y = 2 + Math.sin(walkTime * 2) * 0.1;
+        }
     }
     
     renderer.render(scene, camera);
@@ -148,12 +155,17 @@ startBtn.addEventListener('click', (e) => {
                 // Overlay mit Button sofort ganz weg
                 introOverlay.style.display = 'none';
 
-                // Transition zu 2D HTML Terminal
-                document.getElementById('webgl-container').style.opacity = '0';
+                // Statt das 3D-Canvas zu entfernen, lassen wir es im Hintergrund aktiv (aber unscharf)
+                // document.getElementById('webgl-container').style.opacity = '0';
+                document.getElementById('webgl-container').style.filter = 'blur(8px) brightness(0.4)';
+                document.getElementById('webgl-container').style.transition = 'filter 2s ease-out';
                 
                 terminalApp.style.transition = 'opacity 1s ease-in';
                 scanlines.style.transition = 'opacity 1s ease-in';
                 vignette.style.transition = 'opacity 1s ease-in';
+                
+                // Mach das Terminal leicht transparent, um den 3D Raum durchscheinen zu lassen
+                document.documentElement.style.setProperty('--terminal-bg', 'rgba(5, 5, 10, 0.65)');
                 
                 terminalApp.style.opacity = '1';
                 terminalApp.style.pointerEvents = 'auto';
@@ -161,7 +173,10 @@ startBtn.addEventListener('click', (e) => {
                 vignette.style.opacity = '1';
                 
                 setTimeout(() => {
-                    document.getElementById('webgl-container').style.display = 'none';
+                    // Start ambient slow rotation of the 3D room to keep it alive
+                    isAnimating = true; // Wieder anschalten für Idle-Animation
+                    
+                    // document.getElementById('webgl-container').style.display = 'none';
                     // Erst GANZ AM ENDE den Focus holen, wenn das Terminal da ist
                     const inputField = document.getElementById('command-input');
                     if (inputField) {
