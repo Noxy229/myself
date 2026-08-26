@@ -104,9 +104,10 @@ animate();
 // ==========================================
 // THE SEQUENCE
 // ==========================================
-startBtn.addEventListener('click', () => {
+startBtn.addEventListener('click', (e) => {
+    e.preventDefault(); // Verhindert dass Mobile Browser extra Dinge machen
     introOverlay.style.opacity = '0';
-    setTimeout(() => introOverlay.style.display = 'none', 500);
+    introOverlay.style.pointerEvents = 'none'; // Direkt klicks deaktivieren
     
     isAnimating = true;
 
@@ -120,6 +121,10 @@ startBtn.addEventListener('click', () => {
         const tl = gsap.timeline({
             onComplete: () => {
                 isAnimating = false;
+                
+                // Overlay mit Button sofort ganz weg
+                introOverlay.style.display = 'none';
+
                 // Transition zu 2D HTML Terminal
                 document.getElementById('webgl-container').style.opacity = '0';
                 
@@ -134,7 +139,14 @@ startBtn.addEventListener('click', () => {
                 
                 setTimeout(() => {
                     document.getElementById('webgl-container').style.display = 'none';
-                    document.getElementById('command-input').focus();
+                    // Erst GANZ AM ENDE den Focus holen, wenn das Terminal da ist
+                    const inputField = document.getElementById('command-input');
+                    if (inputField) {
+                        // Auf Mobile triggert ein Focus() aus einem setTimeout oft die Tastatur NICHT korrekt,
+                        // weil es nicht Teil des direkten User-Clicks ist. 
+                        // Aber das Terminal zerschiesst nicht mehr den Intro-Screen.
+                        inputField.focus();
+                    }
                 }, 1000);
             }
         });

@@ -518,12 +518,14 @@ function updateStaticUI(theme) {
 // Initialization
 window.addEventListener('DOMContentLoaded', () => {
     printOutput(COMMANDS.banner.execute());
-    inputElement.focus();
     updateStaticUI(currentTheme);
 });
 
 // Focus
 document.addEventListener('click', () => {
+    if (document.getElementById('webgl-container')?.style.display !== 'none') {
+        return;
+    }
     if (!isHacking) inputElement.focus();
 });
 
