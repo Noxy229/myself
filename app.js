@@ -246,11 +246,15 @@ function animate() {
 
     // Update UI Coords
     if(coordsEl) {
-        coordsEl.innerText = `X: ${camera.position.x.toFixed(4)} | Y: ${camera.position.y.toFixed(4)} | Z: ${camera.position.z.toFixed(4)}`;
+    coordsEl.innerText = `X: ${camera.position.x.toFixed(4)} | Y: ${camera.position.y.toFixed(4)} | Z: ${camera.position.z.toFixed(4)}`;
     }
 
     // Render via Composer (Post-Processing)
+    if (composer) {
     composer.render();
-}
+    } else {
+    renderer.render(scene, camera);
+    }
+    }
 
 animate();
