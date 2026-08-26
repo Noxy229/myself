@@ -1,63 +1,181 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UAC // TERMINAL ACCESS</title>
-    <link rel="stylesheet" href="style.css?v=2">
-    <!-- Google Fonts: Fira Code & Russo One (for headers) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;700&family=Russo+One&family=Orbitron:wght@400;700;900&display=swap"
-        rel="stylesheet">
+    <title>LENNOX // ARCHITECT</title>
+    <style>
+        :root {
+            --bg: #030305;
+            --text: #e0e0e0;
+            --accent: #ff3333;
+            --accent-glow: rgba(255, 51, 51, 0.4);
+            --line: rgba(255, 255, 255, 0.05);
+        }
+        
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Helvetica Neue', Inter, sans-serif;
+            overflow: hidden; /* Canvas takes over */
+            height: 100vh;
+            width: 100vw;
+            cursor: crosshair;
+        }
+
+        /* The 3D / WebGL Background */
+        #canvas-container {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0;
+            opacity: 0;
+            transition: opacity 2s ease-in;
+        }
+
+        /* 2D HUD Overlay */
+        #hud {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 40px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.4);
+        }
+
+        .hud-crosshair {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 40px; height: 40px;
+            transform: translate(-50%, -50%);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        .hud-crosshair::after {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 2px; height: 2px;
+            background: var(--accent);
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 10px var(--accent);
+        }
+
+        /* Content panels tied to 3D space */
+        .info-panel {
+            position: absolute;
+            top: 50%; left: 10%;
+            transform: translateY(-50%);
+            width: 300px;
+            pointer-events: auto;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+        }
+
+        h1 {
+            font-size: 4rem;
+            font-weight: 500;
+            letter-spacing: -0.04em;
+            line-height: 1;
+            margin-bottom: 20px;
+        }
+
+        p {
+            font-size: 0.9rem;
+            line-height: 1.5;
+            color: rgba(255,255,255,0.6);
+            margin-bottom: 30px;
+        }
+
+        .data-list {
+            list-style: none;
+            font-family: monospace;
+            font-size: 10px;
+            color: var(--accent);
+        }
+        .data-list li { margin-bottom: 8px; border-bottom: 1px solid var(--line); padding-bottom: 8px;}
+
+        /* Loader */
+        #loader {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent);
+            font-family: monospace;
+            font-size: 12px;
+            letter-spacing: 0.2em;
+            transition: opacity 1s;
+        }
+
+        /* Interaction hint */
+        #hint {
+            position: absolute;
+            bottom: 40px; left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            letter-spacing: 0.2em;
+            color: rgba(255,255,255,0.3);
+            text-transform: uppercase;
+        }
+    </style>
 </head>
-
 <body>
-    <!-- 3D Intro Container -->
-    <div id="webgl-container" style="position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 100; transition: opacity 1s;"></div>
-    
-    <div id="intro-overlay" style="position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 101; display: flex; justify-content: center; align-items: center; background: rgba(0,0,0,0.8); transition: opacity 0.5s;">
-        <button id="start-btn" style="padding: 15px 30px; font-family: 'Orbitron', sans-serif; font-size: 24px; background: transparent; color: #ff0000; border: 2px solid #ff0000; cursor: pointer; text-shadow: 0 0 10px #ff0000; box-shadow: inset 0 0 10px #ff0000;">INITIALIZE SEQUENCE</button>
+
+    <div id="loader">CALIBRATING NEURAL LINK... <span id="load-progress">0%</span></div>
+
+    <div id="canvas-container"></div>
+
+    <div id="hud">
+        <header>
+            <div>Lennox_Nordmann // Core_V1</div>
+            <div>STATUS: ONLINE // LATENCY: 12ms</div>
+        </header>
+
+        <div class="hud-crosshair"></div>
+
+        <div id="panel-about" class="info-panel">
+            <h1>SYS.ADMIN</h1>
+            <p>I build high-end infrastructure, homelabs, and AI agents. Bridging the gap between raw compute and architectural design.</p>
+            <ul class="data-list">
+                <li>ROLE: Fachinformatiker (Systemintegration)</li>
+                <li>SYS: Linux, Proxmox, Docker</li>
+                <li>HW: Intel i5-13600KF // RX 9070 XT</li>
+            </ul>
+        </div>
+        
+        <div id="panel-projects" class="info-panel" style="left: auto; right: 10%;">
+            <h1>PROJECTS</h1>
+            <p>Self-hosted intelligence and distributed systems.</p>
+            <ul class="data-list">
+                <li>// ASTRA - Self-hosted AI Client</li>
+                <li>// BERICHTSHEFT - Automated IHK Logging</li>
+                <li>// SCROLLCRAFT - Scroll-driven architecture</li>
+            </ul>
+        </div>
+
+        <div id="hint">DRAG TO ROTATE // SCROLL TO EXPLORE</div>
     </div>
 
-    <div class="scanlines" style="z-index: 10;"></div>
-    <div class="overlay" style="z-index: 10;"></div>
-    <div class="vignette" style="z-index: 10;"></div>
-
-    <div class="terminal-container" style="z-index: 11;">
-        <div class="terminal-header">
-            <div class="uac-logo">UAC</div>
-            <div class="title">SYSTEM STATUS: <span class="blink-warning">CRITICAL</span> // ID: noxy229</div>
-            <div class="uac-装饰">|||</div>
-        </div>
-
-        <div class="terminal-window" id="terminal-window">
-            <div id="output"></div>
-            <div class="input-line">
-                <span class="prompt">[UAC] noxy229@mars-base:~$</span>
-                <input type="text" id="command-input" autocomplete="off" spellcheck="false" autocorrect="off"
-                    autocapitalize="off" autofocus>
-            </div>
-        </div>
-
-        <div class="terminal-footer">
-            <span>UNION AEROSPACE CORPORATION</span>
-            <span>LEVEL 5 CLEARANCE</span>
-        </div>
-    </div>
-
-    <div id="achievement-popup" class="achievement-popup">
-        <div class="achievement-icon">🏆</div>
-        <div class="achievement-text">
-            <span class="achievement-title">ACHIEVEMENT UNLOCKED</span>
-            <span class="achievement-name">MASTER HACKER</span>
-            <span class="achievement-desc">You cracked the system! Screenshot this and DM me on Discord.</span>
-        </div>
-    </div>
-    <script src="script.js"></script>
-    <script type="module" src="intro.js"></script>
+    <!-- Import Three.js -->
+    <script type="module" src="app.js"></script>
 </body>
-
 </html>
