@@ -98,17 +98,46 @@ let targetY = 0;
 let scrollY = 0;
 let targetScroll = 0;
 
+// Mouse Support
 document.addEventListener('mousemove', (e) => {
     mouseX = (e.clientX / window.innerWidth) * 2 - 1;
     mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
 });
 
-// Scrollrad steuert die Z-Tiefe der Kamera
+// Scroll Wheel Support
 document.addEventListener('wheel', (e) => {
     targetScroll += e.deltaY * 0.02;
     // Klemme das Scrollen (0 bis 30)
     targetScroll = Math.max(0, Math.min(30, targetScroll));
 });
+
+// Touch / Swipe Support für Mobile
+let touchStartY = 0;
+let lastTouchY = 0;
+
+document.addEventListener('touchstart', (e) => {
+    touchStartY = e.touches[0].clientY;
+    lastTouchY = touchStartY;
+    
+    // Setze Mouse/Licht Position auf Touch
+    mouseX = (e.touches[0].clientX / window.innerWidth) * 2 - 1;
+    mouseY = -(e.touches[0].clientY / window.innerHeight) * 2 + 1;
+}, { passive: false });
+
+document.addEventListener('touchmove', (e) => {
+    e.preventDefault(); // Verhindert Browser-Scrollen
+    const touchY = e.touches[0].clientY;
+    const deltaY = lastTouchY - touchY;
+    lastTouchY = touchY;
+    
+    // Swipe nach oben (deltaY positiv) = reinzoomen (wie scroll down)
+    targetScroll += deltaY * 0.05;
+    targetScroll = Math.max(0, Math.min(30, targetScroll));
+    
+    // Licht folgt dem Finger
+    mouseX = (e.touches[0].clientX / window.innerWidth) * 2 - 1;
+    mouseY = -(e.touches[0].clientY / window.innerHeight) * 2 + 1;
+}, { passive: false });
 
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
@@ -116,24 +145,27 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// Fake Ladesequenz für den Vibe
-let loadProgress = 0;
-const loadInterval = setInterval(() => {
-    loadProgress += Math.floor(Math.random() * 10) + 1;
-    if (loadProgress >= 100) {
-        loadProgress = 100;
-        clearInterval(loadInterval);
-        
-        progressEl.innerText = '100%';
-        setTimeout(() => {
-            loader.style.opacity = '0';
-            container.style.opacity = '1';
-            setTimeout(() => loader.style.display = 'none', 1000);
-        }, 500);
-    } else {
-        progressEl.innerText = loadProgress + '%';
-    }
-}, 100);
+    // Fake Ladesequenz für den Vibe
+    let loadProgress = 0;
+    const loadInterval = setInterval(() => {
+        loadProgress += Math.floor(Math.random() * 15) + 5;
+        if (loadProgress >= 100) {
+            loadProgress = 100;
+            clearInterval(loadInterval);
+            
+            progressEl.innerText = '100%';
+            setTimeout(() => {
+                loader.style.opacity = '0';
+                container.style.opacity = '1';
+                setTimeout(() => {
+                    loader.style.display = 'none';
+                    document.getElementById('hint').style.opacity = '1';
+                }, 1000);
+            }, 500);
+        } else {
+            progressEl.innerText = loadProgress + '%';
+        }
+    }, 80);
 
 const clock = new THREE.Clock();
 

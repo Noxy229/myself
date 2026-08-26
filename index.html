@@ -23,6 +23,9 @@
             height: 100vh;
             width: 100vw;
             cursor: crosshair;
+            touch-action: none; /* Verhindert natives Scrollen/Pull-to-refresh auf Mobile */
+            -webkit-user-select: none;
+            user-select: none;
         }
 
         /* The 3D / WebGL Background */
@@ -82,9 +85,32 @@
             top: 50%; left: 10%;
             transform: translateY(-50%);
             width: 300px;
+            max-width: 80vw;
             pointer-events: auto;
             opacity: 0;
             transition: opacity 0.5s ease;
+            background: rgba(3, 3, 5, 0.7);
+            padding: 20px;
+            border-left: 2px solid var(--accent);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+
+        @media (max-width: 768px) {
+            #hud {
+                padding: 20px;
+            }
+            .info-panel {
+                left: 5% !important;
+                right: auto !important;
+                width: 90vw;
+                top: auto;
+                bottom: 10%;
+                transform: none;
+            }
+            h1 {
+                font-size: 2.5rem;
+            }
         }
 
         h1 {
@@ -135,6 +161,15 @@
             letter-spacing: 0.2em;
             color: rgba(255,255,255,0.3);
             text-transform: uppercase;
+            opacity: 0;
+            transition: opacity 2s;
+            pointer-events: none;
+        }
+
+        @media (max-width: 768px) {
+            #hint::after {
+                content: ' (SWIPE UP/DOWN)';
+            }
         }
     </style>
 </head>
