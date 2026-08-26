@@ -3,513 +3,465 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LENNOX // SYSTEM ARCHITECT</title>
+    <title>Lennox_OS Workspace</title>
     <style>
         :root {
-            --bg: #000000;
-            --text-main: #ffffff;
-            --text-dim: rgba(255, 255, 255, 0.4);
+            --bg-dark: #000;
+            --desktop-bg: #11141c;
             --accent: #ff2a2a;
-            --font-mono: 'Space Mono', 'Courier New', monospace;
-            --font-sans: 'Inter', -apple-system, sans-serif;
+            --window-bg: rgba(15, 18, 25, 0.85);
+            --window-border: rgba(255, 42, 42, 0.4);
+            --text-glow: rgba(255, 42, 42, 0.6);
+            --text-bright: #ffffff;
+            --text-dim: rgba(255,255,255,0.6);
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Courier New', Courier, monospace; }
 
         body {
-            background: var(--bg);
-            color: var(--text-main);
-            font-family: var(--font-sans);
+            background-color: var(--bg-dark);
+            color: var(--text-bright);
             overflow: hidden;
-            width: 100vw;
-            height: 100vh;
-            -webkit-font-smoothing: antialiased;
-            touch-action: none;
+            width: 100vw; height: 100vh;
             user-select: none;
+            -webkit-user-select: none;
         }
 
-        /* WebGL Layer */
-        #webgl-canvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            z-index: 1;
-            /* Start invisible, fade in after boot */
-            opacity: 0;
-            transition: opacity 2s ease-in-out;
-        }
-
-        /* Scanlines Overlay */
-        .scanlines {
-            position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.2));
-            background-size: 100% 4px;
-            z-index: 999;
-            pointer-events: none;
-            opacity: 0.4;
-        }
-
-        /* Cinematic Noise Overlay */
-        .noise {
-            position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            z-index: 998;
-            pointer-events: none;
-            opacity: 0.05;
-            background-image: url('data:image/svg+xml,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)"/%3E%3C/svg%3E');
-        }
-
-        /* UI Layer */
-        #ui-layer {
-            position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            z-index: 10;
-            pointer-events: none;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 3vw;
-        }
-
-        /* Top Bar */
-        .header {
-            display: flex;
-            justify-content: space-between;
-            font-family: var(--font-mono);
-            font-size: 0.75rem;
-            letter-spacing: 0.2em;
-            text-transform: uppercase;
-            color: var(--text-dim);
-            opacity: 0;
-            transform: translateY(-20px);
-            transition: all 1s cubic-bezier(0.19, 1, 0.22, 1) 2s;
-        }
-        
-        .header.visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .header .live-indicator {
-            display: inline-block;
-            width: 6px; height: 6px;
-            background: var(--accent);
-            border-radius: 50%;
-            margin-right: 10px;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% { opacity: 1; box-shadow: 0 0 10px var(--accent); }
-            50% { opacity: 0.2; box-shadow: 0 0 2px var(--accent); }
-            100% { opacity: 1; box-shadow: 0 0 10px var(--accent); }
-        }
-
-        /* Typography & Info Panels */
-        .hero-title {
+        /* BOOT SCREEN */
+        #boot-screen {
             position: absolute;
-            top: 50%;
-            left: 5vw;
-            transform: translateY(-50%);
-            pointer-events: auto;
-        }
-
-        .title-mask {
-            overflow: hidden;
-            padding-bottom: 10px;
-        }
-
-        h1 {
-            font-size: clamp(3rem, 8vw, 8rem);
-            font-weight: 700;
-            letter-spacing: -0.05em;
-            line-height: 0.9;
-            margin: 0;
-            /* Text reveal animation driven by JS */
-            transform: translateY(100%);
-            opacity: 0;
-            transition: all 1.2s cubic-bezier(0.19, 1, 0.22, 1);
-        }
-        
-        h1.revealed {
-            transform: translateY(0);
-            opacity: 1;
-        }
-
-        .subtitle {
-            font-family: var(--font-mono);
-            font-size: clamp(0.7rem, 1vw, 1rem);
-            letter-spacing: 0.2em;
-            color: var(--accent);
-            margin-top: 20px;
-            opacity: 0;
-            transition: opacity 1s ease 1s;
-        }
-
-        .subtitle.revealed {
-            opacity: 1;
-        }
-
-        /* Decrypt Text Effect Class */
-        .decrypt-text {
-            font-family: var(--font-mono);
-            white-space: pre-wrap;
-        }
-
-        /* Interactive Nodes Menu (Bottom Right) */
-        .nodes-menu {
-            position: absolute;
-            bottom: 3vw;
-            right: 3vw;
-            text-align: right;
-            pointer-events: auto;
-            opacity: 0;
-            transform: translateY(20px);
-            transition: all 1s cubic-bezier(0.19, 1, 0.22, 1) 2.5s;
-        }
-
-        .nodes-menu.visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .node-item {
-            font-family: var(--font-mono);
-            font-size: 0.8rem;
-            letter-spacing: 0.1em;
-            color: var(--text-dim);
-            margin-bottom: 15px;
-            cursor: pointer;
-            transition: color 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            gap: 15px;
-        }
-
-        .node-item:hover {
-            color: var(--text-main);
-        }
-
-        .node-line {
-            width: 20px;
-            height: 1px;
-            background: var(--text-dim);
-            transition: width 0.3s, background 0.3s;
-        }
-
-        .node-item:hover .node-line {
-            width: 40px;
-            background: var(--accent);
-        }
-
-        /* Coordinates Display */
-        #coords {
-            position: absolute;
-            bottom: 3vw;
-            left: 3vw;
-            font-family: var(--font-mono);
-            font-size: 0.7rem;
-            color: var(--text-dim);
-            opacity: 0;
-            transition: opacity 1s ease 2s;
-        }
-        
-        #coords.visible { opacity: 1; }
-
-        /* Loader */
-        #boot-sequence {
-            position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
-            background: #000;
+            background: var(--bg-dark);
             z-index: 1000;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            font-family: var(--font-mono);
-            font-size: 0.8rem;
-            color: var(--text-dim);
-            transition: opacity 0.5s;
+            transition: transform 1.5s cubic-bezier(0.7, 0, 0.3, 1), opacity 1.2s ease-in;
         }
-        #boot-log {
-            width: 300px;
-            height: 150px;
-            overflow: hidden;
-            text-align: left;
-            margin-bottom: 20px;
+
+        #boot-btn {
+            background: transparent;
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: all 0.3s;
+            box-shadow: 0 0 10px rgba(255, 42, 42, 0);
+        }
+        #boot-btn:hover {
+            box-shadow: 0 0 15px var(--text-glow);
+            background: rgba(255, 42, 42, 0.1);
+        }
+
+        /* DESKTOP OS */
+        #desktop {
+            position: absolute;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: var(--desktop-bg);
+            background-image: 
+                radial-gradient(circle at 50% 50%, rgba(255, 42, 42, 0.05) 0%, transparent 60%),
+                linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+            background-size: 100% 100%, 30px 30px, 30px 30px;
+            z-index: 10;
+            opacity: 0;
+            transform: scale(0.8);
+            transition: transform 1.5s cubic-bezier(0.7, 0, 0.3, 1), opacity 1.5s ease-out;
+        }
+
+        /* Desktop Icons */
+        .icon-grid {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            width: 120px;
+        }
+        .desktop-icon {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            text-align: center;
+            transition: transform 0.1s;
+        }
+        .desktop-icon:active { transform: scale(0.95); }
+        .desktop-icon svg { width: 40px; height: 40px; fill: var(--text-dim); margin-bottom: 5px; transition: fill 0.3s;}
+        .desktop-icon:hover svg { fill: var(--accent); filter: drop-shadow(0 0 5px var(--text-glow)); }
+        .desktop-icon span { font-size: 12px; background: rgba(0,0,0,0.5); padding: 2px 5px; }
+
+        /* Window System */
+        .window {
+            position: absolute;
+            top: 50px; left: 150px;
+            width: 500px; height: 350px;
+            background: var(--window-bg);
+            border: 1px solid var(--window-border);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+            display: none;
+            flex-direction: column;
+            z-index: 20;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+        .window.active { display: flex; }
+
+        .title-bar {
+            background: rgba(255,42,42,0.1);
+            border-bottom: 1px solid var(--window-border);
+            padding: 8px 10px;
+            font-size: 12px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: grab;
+            color: var(--accent);
+        }
+        .title-bar:active { cursor: grabbing; }
+        
+        .close-btn {
+            background: transparent;
+            color: var(--text-bright);
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .close-btn:hover { color: var(--accent); }
+
+        .window-content {
+            padding: 20px;
+            flex: 1;
+            overflow-y: auto;
+            font-size: 14px;
+            line-height: 1.5;
+            color: var(--text-dim);
+        }
+        .window-content h2 { color: var(--text-bright); margin-bottom: 15px; font-size: 1.2rem;}
+        
+        /* The AI Assistant (Clippy 2.0) */
+        #ai-assistant {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 80px;
+            height: 80px;
+            z-index: 100;
+            cursor: pointer;
+            opacity: 0;
+            transform: translateY(50px);
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        #ai-assistant.visible {
+            opacity: 1;
+            transform: translateY(0);
         }
         
-        /* Sub-Panels (Content overlays that fade in over the 3D scene) */
-        .content-panel {
+        .ai-core {
+            width: 100%; height: 100%;
+            background: radial-gradient(circle at 30% 30%, #444, #111);
+            border: 2px solid var(--text-dim);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            transition: all 0.3s;
+        }
+        .ai-eye {
+            width: 30px; height: 30px;
+            background: var(--accent);
+            border-radius: 50%;
+            box-shadow: 0 0 15px var(--accent);
+            transition: transform 0.2s, height 0.1s;
+        }
+
+        /* Speaking Animation for the Eye */
+        @keyframes speaking {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.3); height: 10px; }
+            100% { transform: scale(1); }
+        }
+        .is-speaking .ai-eye {
+            animation: speaking 0.4s infinite;
+        }
+        .is-speaking .ai-core {
+            border-color: var(--accent);
+            box-shadow: 0 0 20px rgba(255, 42, 42, 0.4);
+        }
+
+        /* Speech Bubble */
+        .speech-bubble {
             position: absolute;
-            top: 50%;
-            right: 15vw;
-            transform: translateY(-50%);
-            width: 400px;
-            pointer-events: auto;
+            bottom: 100px;
+            right: 40px;
+            width: 250px;
+            background: rgba(10, 10, 15, 0.95);
+            border: 1px solid var(--accent);
+            padding: 15px;
+            border-radius: 10px 10px 0 10px;
+            font-size: 13px;
+            line-height: 1.4;
+            color: var(--text-bright);
             opacity: 0;
             visibility: hidden;
-            transition: opacity 0.5s ease;
+            transform: scale(0.9);
+            transform-origin: bottom right;
+            transition: all 0.3s;
+            pointer-events: none;
         }
-        .content-panel.active {
+        .speech-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            right: -1px;
+            border-width: 10px 0 0 15px;
+            border-style: solid;
+            border-color: var(--accent) transparent transparent transparent;
+        }
+        .speech-bubble.active {
             opacity: 1;
             visibility: visible;
-        }
-        .content-panel h2 {
-            font-family: var(--font-mono);
-            font-size: 0.9rem;
-            color: var(--accent);
-            margin-bottom: 20px;
-            letter-spacing: 0.1em;
-            border-bottom: 1px solid rgba(255,42,42,0.3);
-            padding-bottom: 10px;
-        }
-        .content-panel p {
-            font-size: 0.9rem;
-            line-height: 1.6;
-            color: var(--text-dim);
-            margin-bottom: 15px;
-        }
-        .tech-tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-top: 20px;
-        }
-        .tech-tags span {
-            font-family: var(--font-mono);
-            font-size: 0.7rem;
-            padding: 4px 8px;
-            border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 4px;
+            transform: scale(1);
         }
 
         @media (max-width: 768px) {
-            h1 { font-size: 3.5rem; }
-            .content-panel {
-                right: 5vw;
-                left: 5vw;
+            .window {
                 width: 90vw;
-                top: 60%;
+                height: 60vh;
+                left: 5vw !important;
+                top: 10vh !important;
             }
-            .nodes-menu {
-                bottom: 10vh;
+            .speech-bubble {
+                bottom: 100px;
+                right: 20px;
+                width: calc(100vw - 40px);
             }
         }
     </style>
 </head>
 <body>
 
-    <div id="boot-sequence">
-        <div id="boot-log"></div>
-        <div id="boot-progress">[ |||||||||||||||||||| ] 100%</div>
+    <!-- BOOT SCREEN -->
+    <div id="boot-screen">
+        <button id="boot-btn">Init_Workspace</button>
     </div>
 
-    <!-- WebGL Container -->
-    <canvas id="webgl-canvas"></canvas>
-
-    <!-- Post-Processing Overlays -->
-    <div class="scanlines"></div>
-    <div class="noise"></div>
-
-    <div id="ui-layer">
-        <div class="header">
-            <div><span class="live-indicator"></span> UPLINK ESTABLISHED</div>
-            <div>SYS.ID: NOXY229</div>
-        </div>
-
-        <!-- Main Hero Title -->
-        <div class="hero-title" id="main-hero">
-            <div class="title-mask">
-                <h1 id="title-1">LENNOX</h1>
+    <!-- OS DESKTOP -->
+    <div id="desktop">
+        <div class="icon-grid">
+            <div class="desktop-icon" onclick="openApp('about', 'about')">
+                <svg viewBox="0 0 24 24"><path d="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14Z"/></svg>
+                <span>Profile.exe</span>
             </div>
-            <div class="title-mask">
-                <h1 id="title-2" style="color: transparent; -webkit-text-stroke: 1px rgba(255,255,255,0.8);">NORDMANN</h1>
-            </div>
-            <div class="subtitle decrypt-text" data-text="SYSTEMS_ARCHITECT // AI_INFRASTRUCTURE">SYSTEMS_ARCHITECT // AI_INFRASTRUCTURE</div>
-        </div>
-
-        <!-- Dynamic Content Panels (Toggled by Nodes Menu) -->
-        <div id="panel-hardware" class="content-panel">
-            <h2>01 // HARDWARE_&_INFRASTRUCTURE</h2>
-            <p>High-end PC building and home networking. Operating at the intersection of raw silicon power and virtualization.</p>
-            <p>Current active deployment runs on an Intel i5-13600KF paired with a Radeon RX 9070 XT, utilizing a heavily customized Hyte Y60 chassis.</p>
-            <div class="tech-tags">
-                <span>PROXMOX</span><span>LINUX</span><span>GPU-PASSTHROUGH</span>
+            <div class="desktop-icon" onclick="openApp('projects', 'projects')">
+                <svg viewBox="0 0 24 24"><path d="M20,6H12L10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.1,6 20,6Z"/></svg>
+                <span>Projects</span>
             </div>
         </div>
 
-        <div id="panel-software" class="content-panel">
-            <h2>02 // SOFTWARE_&_AGENTS</h2>
-            <p>Developing self-hosted intelligence and automated systems. Moving beyond traditional web design into autonomous execution.</p>
-            <p>Architect of "Astra" (Local AI Client) and automated IHK logging systems. Deep integration with Claude Code and Hermes APIs.</p>
-            <div class="tech-tags">
-                <span>DOCKER</span><span>NODE.JS</span><span>THREE.JS</span>
-            </div>
+        <!-- AI ASSISTANT -->
+        <div id="ai-assistant" onclick="assistantClick()">
+            <div class="ai-core"><div class="ai-eye"></div></div>
         </div>
-
-        <!-- Navigation Nodes -->
-        <div class="nodes-menu">
-            <div class="node-item" data-target="home" onmouseenter="triggerGlitch(this)">
-                <span>00 // CORE</span><div class="node-line"></div>
-            </div>
-            <div class="node-item" data-target="hardware" onmouseenter="triggerGlitch(this)">
-                <span>01 // HW_INFRA</span><div class="node-line"></div>
-            </div>
-            <div class="node-item" data-target="software" onmouseenter="triggerGlitch(this)">
-                <span>02 // SW_AGENTS</span><div class="node-line"></div>
-            </div>
-        </div>
-
-        <div id="coords">X: 0.0000 | Y: 0.0000 | Z: 0.0000</div>
+        <div class="speech-bubble" id="speech-bubble">...</div>
     </div>
 
-    <!-- Load Three.js + PostProcessing from CDN -->
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
-            }
-        }
-    </script>
-    <script type="module" src="app.js"></script>
-    
+    <!-- WINDOW: ABOUT -->
+    <div id="app-about" class="window">
+        <div class="title-bar" onmousedown="startDrag(event, 'app-about')">
+            <span>Profile.exe</span>
+            <button class="close-btn" onclick="closeApp('app-about')">✕</button>
+        </div>
+        <div class="window-content">
+            <h2>LENNOX NORDMANN</h2>
+            <p style="color: var(--accent); margin-bottom: 15px;">SYSTEMS ARCHITECT // AI_INFRASTRUCTURE</p>
+            <p>Role: Fachinformatiker (Systemintegration)<br>Stack: Proxmox, Docker, Linux, AI Agents.</p>
+            <br>
+            <p>I build high-end infrastructure, homelabs, and intelligent systems. Bridging the gap between raw compute power and architectural design.</p>
+        </div>
+    </div>
+
+    <!-- WINDOW: PROJECTS -->
+    <div id="app-projects" class="window">
+        <div class="title-bar" onmousedown="startDrag(event, 'app-projects')">
+            <span>/root/projects/</span>
+            <button class="close-btn" onclick="closeApp('app-projects')">✕</button>
+        </div>
+        <div class="window-content">
+            <h2>DECRYPTED ARCHIVES</h2>
+            <ul style="list-style: none;">
+                <li style="margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">
+                    <strong style="color: var(--text-bright)">// ASTRA</strong><br>
+                    Self-hosted AI chat client featuring a Gemini-style UI. Next.js 15, Tailwind, SQLite, Multi-Provider.
+                </li>
+                <li style="margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">
+                    <strong style="color: var(--text-bright)">// BERICHTSHEFT</strong><br>
+                    IHK-compliant automated logging for apprentices in Niedersachsen.
+                </li>
+                <li>
+                    <strong style="color: var(--text-bright)">// SCROLLCRAFT</strong><br>
+                    Claude Code skill for premium scroll-driven websites on a real design floor.
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- AUDIO FILES -->
+    <audio id="audio-intro" src="audio/intro.ogg"></audio>
+    <audio id="audio-projects" src="audio/projects.ogg"></audio>
+
     <script>
-        // ==========================================
-        // UI & DECRYPT TEXT EFFECTS
-        // ==========================================
-        const CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789@#$%&*";
+        const bootBtn = document.getElementById('boot-btn');
+        const bootScreen = document.getElementById('boot-screen');
+        const desktop = document.getElementById('desktop');
+        const aiAssistant = document.getElementById('ai-assistant');
+        const speechBubble = document.getElementById('speech-bubble');
         
-        function decryptEffect(element, duration = 1000) {
-            const finalString = element.getAttribute('data-text');
-            if (!finalString) return;
-            
-            const length = finalString.length;
-            let iterations = 0;
-            const maxIterations = duration / 30; // Update every 30ms
-
-            const interval = setInterval(() => {
-                let currentString = "";
-                // Erhöhe den Anteil der korrekten Buchstaben basierend auf der Zeit
-                const revealThreshold = (iterations / maxIterations) * length;
-
-                for (let i = 0; i < length; i++) {
-                    if (finalString[i] === " ") {
-                        currentString += " ";
-                    } else if (i < revealThreshold) {
-                        currentString += finalString[i];
-                    } else {
-                        currentString += CHARS[Math.floor(Math.random() * CHARS.length)];
-                    }
-                }
-                
-                element.innerText = currentString;
-                
-                iterations++;
-                if (iterations > maxIterations) {
-                    clearInterval(interval);
-                    element.innerText = finalString;
-                }
-            }, 30);
-        }
-
-        function triggerGlitch(el) {
-            const span = el.querySelector('span');
-            const originalText = span.innerText;
-            const glitched = originalText.split('').map(char => 
-                Math.random() > 0.8 ? CHARS[Math.floor(Math.random() * CHARS.length)] : char
-            ).join('');
-            
-            span.innerText = glitched;
-            setTimeout(() => { span.innerText = originalText; }, 100);
-        }
+        let hasBooted = false;
 
         // ==========================================
-        // BOOT SEQUENCE
+        // BOOT SEQUENCE (ZOOM TRANSITION)
         // ==========================================
-        const bootLogs = [
-            "KERNEL BOOT...",
-            "MOUNTING VFS...",
-            "INITIALIZING NEURAL NET...",
-            "LOADING WEBGL CONTEXT...",
-            "COMPILING SHADERS...",
-            "ESTABLISHING LINK..."
-        ];
-        const logEl = document.getElementById('boot-log');
-        let logIdx = 0;
+        bootBtn.addEventListener('click', () => {
+            if (hasBooted) return;
+            hasBooted = true;
 
-        const bootInterval = setInterval(() => {
-            if (logIdx < bootLogs.length) {
-                logEl.innerHTML += `<div>> ${bootLogs[logIdx]} [OK]</div>`;
-                logIdx++;
-            } else {
-                clearInterval(bootInterval);
-                document.getElementById('boot-sequence').style.opacity = '0';
+            // Animate Boot Screen away (Zoom IN)
+            bootScreen.style.transform = 'scale(3)';
+            bootScreen.style.opacity = '0';
+            
+            // Animate Desktop in (Zoom OUT to normal)
+            desktop.style.opacity = '1';
+            desktop.style.transform = 'scale(1)';
+
+            setTimeout(() => {
+                bootScreen.style.display = 'none';
+                
+                // Spawn Assistant
                 setTimeout(() => {
-                    document.getElementById('boot-sequence').style.display = 'none';
-                    
-                    // Reveal UI
-                    document.getElementById('title-1').classList.add('revealed');
-                    setTimeout(() => document.getElementById('title-2').classList.add('revealed'), 200);
-                    
-                    document.querySelector('.header').classList.add('visible');
-                    document.querySelector('.nodes-menu').classList.add('visible');
-                    document.getElementById('coords').classList.add('visible');
-                    
-                    const sub = document.querySelector('.subtitle');
-                    sub.classList.add('revealed');
-                    decryptEffect(sub, 1200);
+                    aiAssistant.classList.add('visible');
+                    speak('intro', "System override initialized. Welcome to the Lennox Nordmann interface. I am your local assistant construct... Please, explore the workspace.");
+                }, 800);
+            }, 1000);
+        });
 
-                    // Fade in Canvas
-                    document.getElementById('webgl-canvas').style.opacity = '1';
-                }, 500);
+        // ==========================================
+        // AI ASSISTANT (CLIPPY LOGIC)
+        // ==========================================
+        let currentAudio = null;
+        let typeInterval = null;
+
+        function speak(audioId, text) {
+            // Stop current speech
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
             }
-        }, 150);
+            clearInterval(typeInterval);
+
+            // Play Audio
+            currentAudio = document.getElementById('audio-' + audioId);
+            if (currentAudio) {
+                currentAudio.play().catch(e => console.log("Audio play blocked by browser."));
+                aiAssistant.classList.add('is-speaking');
+                
+                currentAudio.onended = () => {
+                    aiAssistant.classList.remove('is-speaking');
+                    setTimeout(() => { speechBubble.classList.remove('active'); }, 3000);
+                };
+            }
+
+            // Typewriter Bubble
+            speechBubble.classList.add('active');
+            speechBubble.innerText = "";
+            let i = 0;
+            typeInterval = setInterval(() => {
+                speechBubble.innerText += text.charAt(i);
+                i++;
+                if (i >= text.length) clearInterval(typeInterval);
+            }, 30); // ~30ms per char
+        }
+
+        function assistantClick() {
+            // Poke the assistant
+            if (!aiAssistant.classList.contains('is-speaking')) {
+                aiAssistant.style.transform = 'translateY(-10px)';
+                setTimeout(() => { aiAssistant.style.transform = 'translateY(0)'; }, 150);
+            }
+        }
 
         // ==========================================
-        // NAVIGATION LOGIC (Tells app.js to move camera)
+        // WINDOW MANAGER (DRAG & DROP)
         // ==========================================
-        window.activePanel = 'home';
+        let zIndexCounter = 20;
+
+        function openApp(id, audioTrigger = null) {
+            const win = document.getElementById('app-' + id);
+            win.classList.add('active');
+            
+            zIndexCounter++;
+            win.style.zIndex = zIndexCounter;
+
+            // Trigger contextual AI voice line
+            if (audioTrigger === 'projects') {
+                speak('projects', "Accessing project directory. Lennox specializes in self-hosted infrastructure and AI agents. Notable deployments include Astra, a local AI client, and an automated IHK logging system.");
+            }
+        }
+
+        function closeApp(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        // Dragging Logic
+        let isDragging = false;
+        let currentWindow = null;
+        let dragOffsetX = 0, dragOffsetY = 0;
+
+        function startDrag(e, winId) {
+            if (e.target.classList.contains('close-btn')) return;
+            isDragging = true;
+            currentWindow = document.getElementById(winId);
+            
+            zIndexCounter++;
+            currentWindow.style.zIndex = zIndexCounter;
+
+            const rect = currentWindow.getBoundingClientRect();
+            const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+            const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+            
+            dragOffsetX = clientX - rect.left;
+            dragOffsetY = clientY - rect.top;
+        }
+
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('touchmove', drag, {passive: false});
+        document.addEventListener('mouseup', () => isDragging = false);
+        document.addEventListener('touchend', () => isDragging = false);
+
+        function drag(e) {
+            if (!isDragging || !currentWindow) return;
+            e.preventDefault();
+            const clientX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+            const clientY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+            
+            currentWindow.style.left = (clientX - dragOffsetX) + 'px';
+            currentWindow.style.top = (clientY - dragOffsetY) + 'px';
+        }
         
-        document.querySelectorAll('.node-item').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const target = btn.getAttribute('data-target');
-                window.activePanel = target;
-                
-                // Hide all panels
-                document.querySelectorAll('.content-panel').forEach(p => p.classList.remove('active'));
-                
-                if (target === 'home') {
-                    document.getElementById('main-hero').style.opacity = '1';
-                    document.getElementById('main-hero').style.pointerEvents = 'auto';
-                } else {
-                    document.getElementById('main-hero').style.opacity = '0';
-                    document.getElementById('main-hero').style.pointerEvents = 'none';
-                    
-                    // Show specific panel
-                    setTimeout(() => {
-                        const panel = document.getElementById('panel-' + target);
-                        if(panel) {
-                            panel.classList.add('active');
-                            // Trigger decrypt on panel headings
-                            const h2 = panel.querySelector('h2');
-                            h2.setAttribute('data-text', h2.innerText);
-                            decryptEffect(h2, 800);
-                        }
-                    }, 400);
-                }
-                
-                // Dispatch event for Three.js to pick up
-                window.dispatchEvent(new CustomEvent('nav-changed', { detail: { target } }));
+        // Window focus on click anywhere in window
+        document.querySelectorAll('.window').forEach(win => {
+            win.addEventListener('mousedown', () => {
+                zIndexCounter++;
+                win.style.zIndex = zIndexCounter;
+            });
+            win.addEventListener('touchstart', () => {
+                zIndexCounter++;
+                win.style.zIndex = zIndexCounter;
             });
         });
     </script>
