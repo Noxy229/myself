@@ -229,6 +229,62 @@
             transform: scale(1);
         }
 
+        /* KONAMI EASTER EGG */
+        #konami-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            background: rgba(255, 0, 0, 0.15);
+            pointer-events: none;
+            z-index: 9999;
+            opacity: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            /* DOOM-style scanline flash overlay */
+            background-image: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(255, 42, 42, 0.2) 3px,
+                rgba(255, 42, 42, 0.2) 4px
+            );
+        }
+        #konami-overlay.active {
+            animation: konami-crt 3s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
+        }
+        .konami-text {
+            color: var(--accent);
+            font-size: 2rem;
+            font-weight: bold;
+            text-shadow: 0 0 10px var(--accent), 0 0 20px rgba(255, 42, 42, 0.8);
+            letter-spacing: 4px;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px 40px;
+            border: 2px solid var(--accent);
+            opacity: 0;
+            transform: scale(0.9);
+        }
+        #konami-overlay.active .konami-text {
+            animation: konami-text-anim 3s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
+        }
+
+        @keyframes konami-crt {
+            0% { opacity: 0; }
+            5% { opacity: 1; background-color: rgba(255, 42, 42, 0.4); }
+            10% { opacity: 0.8; background-color: rgba(255, 0, 0, 0.15); }
+            80% { opacity: 0.8; }
+            100% { opacity: 0; }
+        }
+        @keyframes konami-text-anim {
+            0% { opacity: 0; transform: scale(0.9) skewX(20deg); }
+            10% { opacity: 1; transform: scale(1) skewX(0); }
+            80% { opacity: 1; transform: scale(1); filter: brightness(1); }
+            90% { opacity: 0.5; filter: brightness(2) contrast(2) drop-shadow(0 0 20px var(--accent)); transform: scale(1.05) skewX(-10deg); }
+            100% { opacity: 0; transform: scale(1.1); }
+        }
+
         @media (max-width: 768px) {
             .window {
                 width: 90vw;
@@ -245,6 +301,11 @@
     </style>
 </head>
 <body>
+
+    <!-- KONAMI OVERLAY -->
+    <div id="konami-overlay">
+        <div class="konami-text">ACCESS GRANTED // LEVEL 2 UNLOCKED</div>
+    </div>
 
     <!-- BOOT SCREEN -->
     <div id="boot-screen">
@@ -464,6 +525,51 @@
                 win.style.zIndex = zIndexCounter;
             });
         });
+
+        // ==========================================
+        // KONAMI CODE & EASTER EGG
+        // ==========================================
+        const konamiCode = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+        let konamiInput = [];
+
+        function triggerKonami() {
+            const overlay = document.getElementById('konami-overlay');
+            if (overlay.classList.contains('active')) return;
+            overlay.classList.add('active');
+            setTimeout(() => {
+                overlay.classList.remove('active');
+            }, 3000);
+        }
+
+        // Desktop: Keydown sequence
+        document.addEventListener('keydown', (e) => {
+            konamiInput.push(e.key);
+            konamiInput = konamiInput.slice(-konamiCode.length);
+            if (konamiInput.join('').toLowerCase() === konamiCode.join('').toLowerCase()) {
+                triggerKonami();
+            }
+        });
+
+        // Mobile: 5 rapid consecutive taps on logo/title
+        let tapCount = 0;
+        let tapTimeout;
+        function handleTitleTap() {
+            tapCount++;
+            clearTimeout(tapTimeout);
+            if (tapCount >= 5) {
+                triggerKonami();
+                tapCount = 0;
+            } else {
+                tapTimeout = setTimeout(() => { tapCount = 0; }, 800);
+            }
+        }
+
+        const bootBtnMobile = document.getElementById('boot-btn');
+        if (bootBtnMobile) bootBtnMobile.addEventListener('touchstart', handleTitleTap, {passive: true});
+
+        const titleH2 = document.querySelector('#app-about h2');
+        if (titleH2) titleH2.addEventListener('touchstart', handleTitleTap, {passive: true});
+
     </script>
 </body>
 </html>
